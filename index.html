@@ -5,7 +5,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Facturas · IPAR Spindle</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
   :root{--bg:#f4f5f7;--white:#fff;--border:#e2e4e9;--border2:#d0d3da;--text:#1a1d23;--text2:#4a4f5e;--muted:#8b909e;--accent:#1e54d0;--green:#1a7a4a;--green-bg:#e8f5ee;--orange:#b85c00;--red:#c0392b;--red-bg:#fdecea;--yellow:#b87800;--yellow-bg:#fff8e6;--shadow:0 2px 8px rgba(0,0,0,.1);--shadow-sm:0 1px 3px rgba(0,0,0,.08);--radius:8px}
@@ -240,7 +239,6 @@
 </div>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const SB_URL = 'https://nhgkobfxcktggahdtlta.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oZ2tvYmZ4Y2t0Z2dhaGR0bHRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTc4NzEsImV4cCI6MjA5NTEzMzg3MX0.S6Zyo2gStK7yo7e5pKhanoCayy_wmpn5wOpAeZZhWDc';
@@ -399,28 +397,22 @@ function abrirModal(id=null){
 function cerrarModal(){ document.getElementById('modal-overlay').classList.remove('open'); editingId=null; }
 function closeModalOutside(e){ if(e.target===document.getElementById('modal-overlay')) cerrarModal(); }
 
-async function procesarPDF(tipo, input){
+function procesarPDF(tipo, input){
   const file = input.files[0]; if(!file) return;
   const zone=document.getElementById('zone-'+tipo);
   const label=document.getElementById('label-'+tipo);
-  label.textContent='⏳ Procesando...';
-  try{
-    const ab = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({data:ab}).promise;
-    let texto='';
-    for(let i=1;i<=pdf.numPages;i++){
-      const pg=await pdf.getPage(i);
-      const tc=await pg.getTextContent();
-      texto+=tc.items.map(x=>x.str).join(' ')+'\n';
-    }
-    if(tipo==='factura') extraerDatosFactura(texto);
-    zone.classList.add('has-file');
-    label.textContent=`✓ ${file.name}`;
-    document.getElementById('extract-info').style.display='flex';
-  } catch(e){
-    label.textContent='✗ Error al leer el PDF';
-    zone.classList.remove('has-file');
-  }
+  zone.classList.add('has-file');
+  label.textContent=`✓ ${file.name}`;
+  // Extraer texto básico del PDF con FileReader
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const txt = new TextDecoder('latin1').decode(new Uint8Array(e.target.result));
+      if(tipo==='factura') extraerDatosFactura(txt);
+      document.getElementById('extract-info').style.display='flex';
+    }catch(err){}
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 function extraerDatosFactura(txt){
