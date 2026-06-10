@@ -183,7 +183,9 @@
         </div>
         <div class="form-group">
           <label class="form-label">Nº Proyecto</label>
-          <input class="form-input" id="f-proyecto" placeholder="6155">
+          <select class="form-input" id="f-proyecto">
+            <option value="">— Sin proyecto —</option>
+          </select>
         </div>
         <div class="form-group">
           <label class="form-label">Cliente</label>
@@ -273,8 +275,23 @@ function badgeEstado(f){
   return `<span class="badge badge-${e}">${labels[e]}</span>`;
 }
 
+let proyectosList = [];
+async function cargarProyectos(){
+  const data = await api('/rest/v1/proyectos?select=numero,cliente_nombre&order=numero.desc') || [];
+  proyectosList = data;
+  const sel = document.getElementById('f-proyecto');
+  sel.innerHTML = '<option value="">— Sin proyecto —</option>';
+  data.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.numero;
+    o.textContent = `${p.numero}${p.cliente_nombre ? ' — '+p.cliente_nombre : ''}`;
+    sel.appendChild(o);
+  });
+}
+
 async function cargar(){
   facturas = await api('/rest/v1/facturas?select=*&order=numero_factura.asc') || [];
+  await cargarProyectos();
   renderKPIs(); renderTabla();
 }
 
@@ -389,6 +406,7 @@ function abrirModal(id=null){
     document.getElementById('f-emitida').checked=!!f.factura_emitida;
     document.getElementById('f-enviada').checked=!!f.enviada;
     document.getElementById('f-cobrado').checked=!!f.cobrado;
+    if(f.numero_proyecto) document.getElementById('f-proyecto').value=f.numero_proyecto;
     if(f.factura_pdf_url){ document.getElementById('zone-factura').classList.add('has-file'); document.getElementById('label-factura').textContent='✓ Factura cargada'; }
     if(f.albaran_pdf_url){ document.getElementById('zone-albaran').classList.add('has-file'); document.getElementById('label-albaran').textContent='✓ Albarán cargado'; }
   }
@@ -435,9 +453,9 @@ function extraerDatosFactura(txt){
   if(m) set('f-num', m[1]+'/'+m[2]);
   else { m=txt.match(/(?:Fra|Fac|Factura)[.\s#nº°]*(\d{1,6})/i); if(m) set('f-num', m[1]); }
 
-  // Cliente: línea después de "Datos del cliente"
+  // Cliente: línea después de "Datos del cliente", cortar antes de "Código", CIF o dirección
   m=txt.match(/Datos del cliente\s+([A-ZÁÉÍÓÚÜÑ][^\n]{3,60})/);
-  if(m) set('f-cliente', m[1].trim());
+  if(m){ let c=m[1].trim(); c=c.replace(/\s+(C[oó]digo|CIF|NIF|B\d{8}|A\d{8}).*/i,'').trim(); set('f-cliente',c); }
 
   // Cabezal/Descripción: del campo "Descripción de la operación"
   m=txt.match(/Descripci[oó]n de la operaci[oó]n\s+(?:Venta[^:]+:\s*)?([^\n]{5,80})/i);
@@ -461,7 +479,8 @@ function extraerDatosFactura(txt){
   if(m) set('f-con-iva', parseImporte(m[1]));
 
   // Proyecto (si aparece en el PDF)
-  m=txt.match(/[Pp]royecto[:\s#nº°]+(\d{4,6})/); if(m) set('f-proyecto', m[1]);
+  m=txt.match(/[Pp]royecto[:\s#nº°]+(\d{4,6})/);
+  if(m){ document.getElementById('f-proyecto').value=m[1]; }
 
   // Pedido cliente
   m=txt.match(/[Pp]edido[:\s#nº°]+([A-Z0-9\/\-]{4,20})/); if(m) set('f-pedido', m[1].trim());
@@ -492,8 +511,9 @@ async function guardarFactura(){
       const i=facturas.findIndex(f=>f.id===editingId);
       if(i>=0) facturas[i]={...facturas[i],...payload};
     } else {
-      const r=await api('/rest/v1/facturas?select=*','POST',{...payload,Prefer:'return=representation'});
-      if(r&&r[0]) facturas.push(r[0]);
+      const r=await fetch(SB_URL+'/rest/v1/facturas',{method:'POST',headers:{...hdrs,'Prefer':'return=representation'},body:JSON.stringify(payload)});
+      const data=await r.json();
+      if(data&&data[0]) facturas.push(data[0]);
     }
     cerrarModal(); renderKPIs(); renderTabla();
   } catch(e){ alert('Error al guardar: '+e.message); }
