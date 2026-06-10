@@ -423,23 +423,48 @@ async function procesarPDF(tipo, input){
   }
 }
 
+function parseFecha(d,m,y){ return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+function parseImporte(s){ return s.replace(/\./g,'').replace(',','.'); }
+
 function extraerDatosFactura(txt){
   const set=(id,val)=>{ if(val && !document.getElementById(id).value) document.getElementById(id).value=val; };
-  // Nº factura
   let m;
-  m=txt.match(/(?:factura|invoice|fra)[^\w]*[:\s#]*([A-Z0-9\/\-]{4,20})/i); if(m) set('f-num',m[1].trim());
-  // Importe con IVA
-  m=txt.match(/total\s+factura[^\d]*([\d.,]+)/i); if(m) set('f-con-iva',m[1].replace('.','').replace(',','.'));
-  // Importe sin IVA
-  m=txt.match(/base\s+imponible[^\d]*([\d.,]+)/i); if(m) set('f-sin-iva',m[1].replace('.','').replace(',','.'));
-  // Fecha
-  m=txt.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/); if(m) set('f-fecha-emision',`${m[3]}-${m[2]}-${m[1]}`);
+
+  // Nº Factura: "Factura ORDINARIA / 54" → "ORDINARIA/54"
+  m=txt.match(/Factura\s+([A-Z]+)\s*\/\s*(\d+)/i);
+  if(m) set('f-num', m[1]+'/'+m[2]);
+  else { m=txt.match(/(?:Fra|Fac|Factura)[.\s#nº°]*(\d{1,6})/i); if(m) set('f-num', m[1]); }
+
+  // Cliente: línea después de "Datos del cliente"
+  m=txt.match(/Datos del cliente\s+([A-ZÁÉÍÓÚÜÑ][^\n]{3,60})/);
+  if(m) set('f-cliente', m[1].trim());
+
+  // Cabezal/Descripción: del campo "Descripción de la operación"
+  m=txt.match(/Descripci[oó]n de la operaci[oó]n\s+(?:Venta[^:]+:\s*)?([^\n]{5,80})/i);
+  if(m) set('f-cabezal', m[1].trim().replace(/,.*$/,'').trim()); // solo primer concepto
+
+  // Fecha emisión: "Fecha de expedición: DD-MM-YYYY"
+  m=txt.match(/(?:expedici[oó]n|emisi[oó]n|operaci[oó]n)[:\s]+(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/i);
+  if(m) set('f-fecha-emision', parseFecha(m[1],m[2],m[3]));
+  else { m=txt.match(/(\d{2})[-\/](\d{2})[-\/](\d{4})/); if(m) set('f-fecha-emision', parseFecha(m[1],m[2],m[3])); }
+
   // Vencimiento
-  m=txt.match(/vencimiento[^\d]*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i); if(m) set('f-vencimiento',`${m[3]}-${m[2]}-${m[1]}`);
-  // Proyecto
-  m=txt.match(/proyecto\s*n[oº°]?[:\s]*(\d{4,6})/i); if(m) set('f-proyecto',m[1]);
-  // Pedido
-  m=txt.match(/pedido[^\w]*[:\s#]*([A-Z0-9\/\-]{4,20})/i); if(m) set('f-pedido',m[1].trim());
+  m=txt.match(/Vencimiento[:\s]+(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/i);
+  if(m) set('f-vencimiento', parseFecha(m[1],m[2],m[3]));
+
+  // Base imponible (sin IVA)
+  m=txt.match(/Base imponible\s+([\d.,]+)/i);
+  if(m) set('f-sin-iva', parseImporte(m[1]));
+
+  // Total con IVA — buscar "Total" seguido del importe mayor
+  m=txt.match(/\bTotal\b\s+([\d.,]+)\s*€/i);
+  if(m) set('f-con-iva', parseImporte(m[1]));
+
+  // Proyecto (si aparece en el PDF)
+  m=txt.match(/[Pp]royecto[:\s#nº°]+(\d{4,6})/); if(m) set('f-proyecto', m[1]);
+
+  // Pedido cliente
+  m=txt.match(/[Pp]edido[:\s#nº°]+([A-Z0-9\/\-]{4,20})/); if(m) set('f-pedido', m[1].trim());
 }
 
 async function guardarFactura(){
