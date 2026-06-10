@@ -156,21 +156,21 @@
       <div class="form-grid" style="margin-bottom:20px">
         <div class="form-group">
           <label class="form-label">📄 Factura PDF</label>
-          <label class="upload-zone" id="zone-factura" for="file-factura" style="cursor:pointer">
+          <div class="upload-zone" id="zone-factura">
             <div style="font-size:24px">📄</div>
-            <div class="upload-label" id="label-factura">Subir factura PDF</div>
+            <div class="upload-label" id="label-factura">Seleccionar factura PDF</div>
             <div class="upload-hint">Extrae datos automáticamente</div>
-          </label>
-          <input type="file" id="file-factura" accept=".pdf" style="display:none" onchange="procesarPDF('factura',this)">
+            <input type="file" id="file-factura" accept=".pdf" style="margin-top:8px;font-size:12px;width:100%" onchange="procesarPDF('factura',this)">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">📦 Albarán PDF</label>
-          <label class="upload-zone" id="zone-albaran" for="file-albaran" style="cursor:pointer">
+          <div class="upload-zone" id="zone-albaran">
             <div style="font-size:24px">📦</div>
-            <div class="upload-label" id="label-albaran">Subir albarán PDF</div>
+            <div class="upload-label" id="label-albaran">Seleccionar albarán PDF</div>
             <div class="upload-hint">Opcional</div>
-          </label>
-          <input type="file" id="file-albaran" accept=".pdf" style="display:none" onchange="procesarPDF('albaran',this)">
+            <input type="file" id="file-albaran" accept=".pdf" style="margin-top:8px;font-size:12px;width:100%" onchange="procesarPDF('albaran',this)">
+          </div>
         </div>
       </div>
       <div id="extract-info" style="display:none" class="pdf-extract-badge">✨ Datos extraídos del PDF — revisa y completa los campos</div>
