@@ -85,7 +85,13 @@
     <span class="logo-sep">|</span>
     <span class="logo-section">Control de Facturas</span>
   </div>
-  <button class="btn btn-primary" onclick="abrirModal()">+ Nueva factura</button>
+  <div style="display:flex;gap:10px;align-items:center">
+    <label class="btn btn-primary" style="cursor:pointer">
+      📄 Subir factura PDF
+      <input type="file" id="file-factura-main" accept=".pdf" style="display:none" onchange="subirPDFDesdeHeader('factura',this)">
+    </label>
+    <button class="btn btn-primary" onclick="abrirModal()" style="background:#444">+ Manual</button>
+  </div>
 </header>
 
 <main>
@@ -424,6 +430,15 @@ function abrirModal(id=null){
 
 function cerrarModal(){ document.getElementById('modal-overlay').classList.remove('open'); editingId=null; }
 function closeModalOutside(e){ if(e.target===document.getElementById('modal-overlay')) cerrarModal(); }
+
+async function subirPDFDesdeHeader(tipo, input){
+  // Abre el modal primero, luego procesa el PDF
+  abrirModal();
+  await new Promise(r => setTimeout(r, 100));
+  await procesarPDF(tipo, input);
+  // Resetear el input para poder volver a usar
+  input.value = '';
+}
 
 async function procesarPDF(tipo, input){
   const file = input.files[0]; if(!file) return;
