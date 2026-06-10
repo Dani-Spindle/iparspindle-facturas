@@ -86,11 +86,11 @@
     <span class="logo-section">Control de Facturas</span>
   </div>
   <div style="display:flex;gap:10px;align-items:center">
-    <label class="btn btn-primary" style="cursor:pointer">
-      📄 Subir factura PDF
-      <input type="file" id="file-factura-main" accept=".pdf" style="display:none" onchange="subirPDFDesdeHeader('factura',this)">
-    </label>
-    <button class="btn btn-primary" onclick="abrirModal()" style="background:#444">+ Manual</button>
+    <div id="pwa-warning" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:6px 12px;font-size:12px;color:#856404">
+      ⚠ Subida de PDFs no disponible en la app del Dock —
+      <a href="https://facturas.iparspindle.com?auth=aXBhcjIzMTI=" style="color:#856404;font-weight:600">Abrir en Safari ↗</a>
+    </div>
+    <button class="btn btn-primary" onclick="abrirModal()">+ Nueva factura</button>
   </div>
 </header>
 
@@ -431,14 +431,6 @@ function abrirModal(id=null){
 function cerrarModal(){ document.getElementById('modal-overlay').classList.remove('open'); editingId=null; }
 function closeModalOutside(e){ if(e.target===document.getElementById('modal-overlay')) cerrarModal(); }
 
-async function subirPDFDesdeHeader(tipo, input){
-  // Abre el modal primero, luego procesa el PDF
-  abrirModal();
-  await new Promise(r => setTimeout(r, 100));
-  await procesarPDF(tipo, input);
-  // Resetear el input para poder volver a usar
-  input.value = '';
-}
 
 async function procesarPDF(tipo, input){
   const file = input.files[0]; if(!file) return;
@@ -556,6 +548,11 @@ function exportarCSV(){
 }
 
 cargar();
+
+// Detectar modo PWA (Dock) y mostrar aviso
+if(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches){
+  document.getElementById('pwa-warning').style.display='block';
+}
 </script>
 </body>
 </html>
