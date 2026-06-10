@@ -448,9 +448,9 @@ function extraerDatosFactura(txt){
   const set=(id,val)=>{ if(val && !document.getElementById(id).value) document.getElementById(id).value=val; };
   let m;
 
-  // Nº Factura: "Factura ORDINARIA / 54" → "ORDINARIA/54"
-  m=txt.match(/Factura\s+([A-Z]+)\s*\/\s*(\d+)/i);
-  if(m) set('f-num', m[1]+'/'+m[2]);
+  // Nº Factura: "Factura ORDINARIA / 54" → "54"
+  m=txt.match(/Factura\s+[A-Z]+\s*\/\s*(\d+)/i);
+  if(m) set('f-num', m[1]);
   else { m=txt.match(/(?:Fra|Fac|Factura)[.\s#nº°]*(\d{1,6})/i); if(m) set('f-num', m[1]); }
 
   // Cliente: línea después de "Datos del cliente", cortar antes de "Código", CIF o dirección
