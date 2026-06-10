@@ -507,12 +507,15 @@ async function guardarFactura(){
   };
   try{
     if(editingId){
-      await api(`/rest/v1/facturas?id=eq.${editingId}`,'PATCH',payload);
+      const r=await fetch(SB_URL+`/rest/v1/facturas?id=eq.${editingId}`,{method:'PATCH',headers:{...hdrs,'Prefer':'return=representation'},body:JSON.stringify(payload)});
+      const data=await r.json();
+      if(data&&data.code){ throw new Error(data.message||JSON.stringify(data)); }
       const i=facturas.findIndex(f=>f.id===editingId);
       if(i>=0) facturas[i]={...facturas[i],...payload};
     } else {
       const r=await fetch(SB_URL+'/rest/v1/facturas',{method:'POST',headers:{...hdrs,'Prefer':'return=representation'},body:JSON.stringify(payload)});
       const data=await r.json();
+      if(data&&data.code){ throw new Error(data.message||JSON.stringify(data)); }
       if(data&&data[0]) facturas.push(data[0]);
     }
     cerrarModal(); renderKPIs(); renderTabla();
