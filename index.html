@@ -3,6 +3,7 @@
 <head>
 <script>(function(){const A="aXBhcjIzMTI=";const p=new URLSearchParams(location.search).get("auth");if(p===A){sessionStorage.setItem("ipar_auth",A);return;}if(sessionStorage.getItem("ipar_auth")===A)return;document.documentElement.style.display="none";document.addEventListener("DOMContentLoaded",function(){document.documentElement.style.display="";var o=document.createElement("div");o.style.cssText="position:fixed;inset:0;background:#f0ede8;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:sans-serif;";o.innerHTML='<div style="font-size:28px;font-weight:700;letter-spacing:3px;color:#b8872a;">IPAR SPINDLE</div><div style="font-size:12px;letter-spacing:2px;color:#999;text-transform:uppercase;">PIN de acceso</div><input id="_pin" type="password" inputmode="numeric" maxlength="10" style="width:150px;text-align:center;font-size:24px;letter-spacing:6px;padding:10px;border:2px solid #e0dbd3;border-radius:8px;outline:none;" autofocus><button onclick="_chk()" style="background:#b8872a;color:#fff;border:none;border-radius:8px;padding:10px 32px;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">Entrar</button><div id="_err" style="display:none;color:#e05c5c;font-size:13px;">PIN incorrecto</div>';document.body.appendChild(o);document.getElementById("_pin").addEventListener("keydown",function(e){if(e.key==="Enter")_chk();});window._chk=function(){var v=document.getElementById("_pin").value;if(btoa("ipar"+v)===A){sessionStorage.setItem("ipar_auth",A);location.reload();}else{document.getElementById("_err").style.display="block";document.getElementById("_pin").value="";setTimeout(function(){document.getElementById("_err").style.display="none";},2000);}};});})();</script>
 <meta charset="UTF-8">
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Facturas · IPAR Spindle</title>
 <style>
@@ -397,22 +398,29 @@ function abrirModal(id=null){
 function cerrarModal(){ document.getElementById('modal-overlay').classList.remove('open'); editingId=null; }
 function closeModalOutside(e){ if(e.target===document.getElementById('modal-overlay')) cerrarModal(); }
 
-function procesarPDF(tipo, input){
+async function procesarPDF(tipo, input){
   const file = input.files[0]; if(!file) return;
   const zone=document.getElementById('zone-'+tipo);
   const label=document.getElementById('label-'+tipo);
   zone.classList.add('has-file');
   label.textContent=`✓ ${file.name}`;
-  // Extraer texto básico del PDF con FileReader
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      const txt = new TextDecoder('latin1').decode(new Uint8Array(e.target.result));
-      if(tipo==='factura') extraerDatosFactura(txt);
-      document.getElementById('extract-info').style.display='flex';
-    }catch(err){}
-  };
-  reader.readAsArrayBuffer(file);
+  try{
+    const pdfjsLib = window['pdfjs-dist/build/pdf'] || window.pdfjsLib;
+    if(!pdfjsLib){ label.textContent=`✓ ${file.name} (sin extracción)`; return; }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    const ab = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data:ab}).promise;
+    let texto='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const pg = await pdf.getPage(i);
+      const tc = await pg.getTextContent();
+      texto += tc.items.map(x=>x.str).join(' ') + '\n';
+    }
+    if(tipo==='factura') extraerDatosFactura(texto);
+    document.getElementById('extract-info').style.display='flex';
+  }catch(e){
+    label.textContent=`✓ ${file.name} (sin extracción)`;
+  }
 }
 
 function extraerDatosFactura(txt){
