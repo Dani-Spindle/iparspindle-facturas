@@ -19,7 +19,7 @@
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
   .kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow-sm)}
   .kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:6px}
-  .kpi-value{font-size:20px;font-weight:700;color:var(--text)}.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px;font-family:'IBM Plex Mono',monospace}
+  .kpi-value{font-size:20px;font-weight:700;color:var(--text)}.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px;font-family:'IBM Plex Mono',monospace}.kpi-siniva{font-size:11px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-family:'IBM Plex Mono',monospace}
   .kpi.green .kpi-value{color:var(--green)}.kpi.orange .kpi-value{color:var(--orange)}.kpi.red .kpi-value{color:var(--red)}.kpi.accent .kpi-value{color:var(--accent)}
   .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .search-wrap{flex:1;min-width:200px;position:relative}
@@ -100,16 +100,19 @@
       <div class="kpi-label">Total facturado</div>
       <div class="kpi-value" id="kpi-total">—</div>
       <div class="kpi-sub" id="kpi-total-sub">—</div>
+      <div class="kpi-siniva" id="kpi-total-siniva">—</div>
     </div>
     <div class="kpi green">
       <div class="kpi-label">Cobrado</div>
       <div class="kpi-value" id="kpi-cobrado">—</div>
       <div class="kpi-sub" id="kpi-cobrado-sub">—</div>
+      <div class="kpi-siniva" id="kpi-cobrado-siniva">—</div>
     </div>
     <div class="kpi orange">
       <div class="kpi-label">Pendiente cobro</div>
       <div class="kpi-value" id="kpi-pendiente">—</div>
       <div class="kpi-sub" id="kpi-pendiente-sub">—</div>
+      <div class="kpi-siniva" id="kpi-pendiente-siniva">—</div>
     </div>
     <div class="kpi red">
       <div class="kpi-label">Vencidas</div>
@@ -310,14 +313,20 @@ function renderKPIs(){
   const vencidas = facturas.filter(f=>!f.cobrado && f.fecha_vencimiento && /^\d{4}-\d{2}-\d{2}/.test(f.fecha_vencimiento) && new Date(f.fecha_vencimiento)<hoy);
   const proximas = facturas.filter(f=>!f.cobrado && f.fecha_vencimiento && /^\d{4}-\d{2}-\d{2}/.test(f.fecha_vencimiento) && new Date(f.fecha_vencimiento)>=hoy && new Date(f.fecha_vencimiento)<=en15);
   const total = facturas.reduce((a,f)=>a+(f.importe_con_iva||0),0);
+  const totalSin = facturas.reduce((a,f)=>a+(f.importe_sin_iva||0),0);
   const totalCob = cobradas.reduce((a,f)=>a+(f.importe_con_iva||0),0);
+  const totalCobSin = cobradas.reduce((a,f)=>a+(f.importe_sin_iva||0),0);
   const totalPend = pendientes.reduce((a,f)=>a+(f.importe_con_iva||0),0);
+  const totalPendSin = pendientes.reduce((a,f)=>a+(f.importe_sin_iva||0),0);
   document.getElementById('kpi-total').textContent = fmt(total);
   document.getElementById('kpi-total-sub').textContent = `${facturas.length} facturas`;
+  document.getElementById('kpi-total-siniva').textContent = `Sin IVA: ${fmt(totalSin)}`;
   document.getElementById('kpi-cobrado').textContent = fmt(totalCob);
   document.getElementById('kpi-cobrado-sub').textContent = `${cobradas.length} facturas`;
+  document.getElementById('kpi-cobrado-siniva').textContent = `Sin IVA: ${fmt(totalCobSin)}`;
   document.getElementById('kpi-pendiente').textContent = fmt(totalPend);
   document.getElementById('kpi-pendiente-sub').textContent = `${pendientes.length} facturas`;
+  document.getElementById('kpi-pendiente-siniva').textContent = `Sin IVA: ${fmt(totalPendSin)}`;
   document.getElementById('kpi-vencidas').textContent = vencidas.length;
   document.getElementById('kpi-vencidas-sub').textContent = fmt(vencidas.reduce((a,f)=>a+(f.importe_con_iva||0),0));
   document.getElementById('kpi-proximas').textContent = proximas.length;
