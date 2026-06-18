@@ -306,21 +306,38 @@ async function cargar(){
   renderKPIs(); renderTabla();
 }
 
+// Conjunto base para los KPIs: mismo año + búsqueda que el listado (sin el filtro de estado),
+// para que los totales siempre cuadren con la tabla.
+function baseKPI(){
+  const q=(document.getElementById('busqueda').value||'').toLowerCase();
+  const yr=document.getElementById('filtroYear').value;
+  return facturas.filter(f=>{
+    if(q && !['numero_factura','cliente','numero_proyecto','cabezal'].some(k=>(f[k]||'').toLowerCase().includes(q))) return false;
+    if(yr){
+      const fechas=[f.fecha_emision,f.fecha_vencimiento].filter(Boolean);
+      if(!fechas.some(d=>d.startsWith(yr))) return false;
+    }
+    return true;
+  });
+}
+
 function renderKPIs(){
+  const data = baseKPI();
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   const en15 = new Date(hoy); en15.setDate(en15.getDate()+15);
-  const cobradas = facturas.filter(f=>f.cobrado);
-  const pendientes = facturas.filter(f=>!f.cobrado && f.importe_con_iva);
-  const vencidas = facturas.filter(f=>!f.cobrado && f.fecha_vencimiento && /^\d{4}-\d{2}-\d{2}/.test(f.fecha_vencimiento) && new Date(f.fecha_vencimiento)<hoy);
-  const proximas = facturas.filter(f=>!f.cobrado && f.fecha_vencimiento && /^\d{4}-\d{2}-\d{2}/.test(f.fecha_vencimiento) && new Date(f.fecha_vencimiento)>=hoy && new Date(f.fecha_vencimiento)<=en15);
-  const total = facturas.reduce((a,f)=>a+(f.importe_con_iva||0),0);
-  const totalSin = facturas.reduce((a,f)=>a+(f.importe_sin_iva||0),0);
+  // Mismos estados excluyentes que el listado (estadoFactura): cobrado / pendiente / vencido.
+  const cobradas = data.filter(f=>estadoFactura(f)==='cobrado');
+  const pendientes = data.filter(f=>estadoFactura(f)==='pendiente');
+  const vencidas = data.filter(f=>estadoFactura(f)==='vencido');
+  const proximas = data.filter(f=>!f.cobrado && f.fecha_vencimiento && /^\d{4}-\d{2}-\d{2}/.test(f.fecha_vencimiento) && new Date(f.fecha_vencimiento)>=hoy && new Date(f.fecha_vencimiento)<=en15);
+  const total = data.reduce((a,f)=>a+(f.importe_con_iva||0),0);
+  const totalSin = data.reduce((a,f)=>a+(f.importe_sin_iva||0),0);
   const totalCob = cobradas.reduce((a,f)=>a+(f.importe_con_iva||0),0);
   const totalCobSin = cobradas.reduce((a,f)=>a+(f.importe_sin_iva||0),0);
   const totalPend = pendientes.reduce((a,f)=>a+(f.importe_con_iva||0),0);
   const totalPendSin = pendientes.reduce((a,f)=>a+(f.importe_sin_iva||0),0);
   document.getElementById('kpi-total').textContent = fmt(total);
-  document.getElementById('kpi-total-sub').textContent = `${facturas.length} facturas`;
+  document.getElementById('kpi-total-sub').textContent = `${data.length} facturas`;
   document.getElementById('kpi-total-siniva').textContent = `Sin IVA: ${fmt(totalSin)}`;
   document.getElementById('kpi-cobrado').textContent = fmt(totalCob);
   document.getElementById('kpi-cobrado-sub').textContent = `${cobradas.length} facturas`;
@@ -352,6 +369,7 @@ function filteredData(){
 }
 
 function renderTabla(){
+  renderKPIs(); // mantener los totales sincronizados con el año/búsqueda activos
   const data = filteredData().sort((a,b)=>{
     let va=a[sortCol]||'', vb=b[sortCol]||'';
     if(typeof va==='boolean') return sortAsc?(va?1:-1):(va?-1:1);
